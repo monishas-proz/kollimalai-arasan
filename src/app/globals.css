@@ -1,0 +1,348 @@
+@import "tailwindcss";
+
+:root {
+  /* Core Background & Foreground */
+  --background: #fafbf9;
+  --foreground: #1c1917;
+
+  /* Fonts */
+  --font-inter: var(--font-inter);
+  --font-hanken: var(--font-hanken);
+
+  /* Primary Brand Green (#007F06) */
+  --primary-base: #007F06;
+  --primary-shade-200: #007005;
+  --primary-shade-400: #005904;
+  --primary-shade-600: #004203;
+  --primary-shade-800: #002e02;
+  --primary-tint-200: #42cc4e;
+  --primary-tint-400: #82e28b;
+  --primary-tint-600: #b8f0bd;
+  --primary-tint-800: #dbf7de;
+
+  /* Secondary Brand Green (#007F06) */
+  --secondary-base: #007F06;
+  --secondary-shade-200: #007005;
+  --secondary-shade-400: #005904;
+  --secondary-shade-600: #004203;
+  --secondary-shade-800: #002e02;
+  --secondary-tint-200: #42cc4e;
+  --secondary-tint-400: #82e28b;
+  --secondary-tint-600: #b8f0bd;
+  --secondary-tint-800: #dbf7de;
+
+  /* Danger */
+  --danger-base: #fb0000;
+
+  /* ------------------------------------------------------------------ */
+  /* Semantic Color Scale (50–900)                                      */
+  /* ------------------------------------------------------------------ */
+
+  /* Primary Scale (#007F06) */
+  --primary-50: #f0faf1;
+  --primary-100: #dbf7de;
+  --primary-200: #b8f0bd;
+  --primary-300: #82e28b;
+  --primary-400: #42cc4e;
+  --primary-500: #007F06;
+  --primary-600: #007005;
+  --primary-700: #005904;
+  --primary-800: #004203;
+  --primary-900: #002e02;
+
+  /* Secondary Scale (#007F06) */
+  --secondary-50: #f0faf1;
+  --secondary-100: #dbf7de;
+  --secondary-200: #b8f0bd;
+  --secondary-300: #82e28b;
+  --secondary-400: #42cc4e;
+  --secondary-500: #007F06;
+  --secondary-600: #007005;
+  --secondary-700: #005904;
+  --secondary-800: #004203;
+  --secondary-900: #002e02;
+
+  /* Clean Surfaces & Soft Borders */
+  --cream-50: #fafbf9;
+  --cream-100: #f2f7f2;
+  --cream-200: #e6efe6;
+  --cream-300: #d6e4d6;
+  --cream-border: #e2ede2;
+  --cream-border-subtle: #edf5ed;
+  --cream-border-hover: #cce0cc;
+  --cream-white: #ffffff;
+
+  /* Neutral */
+  --neutral-50: #fafaf9;
+  --neutral-100: #f5f5f4;
+  --neutral-200: #e7e5e4;
+  --neutral-300: #d6d3d1;
+  --neutral-400: #a2968c;
+  --neutral-500: #7c7169;
+  --neutral-600: #57534e;
+  --neutral-700: #4a423d;
+  --neutral-800: #292524;
+  --neutral-900: #211c1a;
+
+  /* Success */
+  --success-50: #ecfdf5;
+  --success-100: #dcfce7;
+  --success-200: #bbf7d0;
+  --success-300: #86efac;
+  --success-400: #4ade80;
+  --success-500: #22c55e;
+  --success-600: #16a34a;
+  --success-700: #15803d;
+  --success-800: #166534;
+  --success-900: #14532d;
+
+  /* Error */
+  --error-50: #fef2f2;
+  --error-100: #fee2e2;
+  --error-200: #fecaca;
+  --error-300: #fca5a5;
+  --error-400: #f87171;
+  --error-500: #ef4444;
+  --error-600: #dc2626;
+  --error-700: #b91c1c;
+  --error-800: #991b1b;
+  --error-900: #7f1d1d;
+
+  /* Primary Brand Scale (Storefront & Accents) */
+  --brown-50: #f0faf1;
+  --brown-100: #dbf7de;
+  --brown-200: #b8f0bd;
+  --brown-300: #82e28b;
+  --brown-400: #42cc4e;
+  --brown-500: #007F06;
+  --brown-600: #007005;
+  --brown-700: #005904;
+  --brown-800: #004203;
+  --brown-900: #002e02;
+  --brown-950: #001f01;
+
+  /* Pastels & Accents for Reviews & Cards */
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --green-50: #f0faf1;
+  --green-100: #dbf7de;
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --yellow-50: #fefce8;
+  --yellow-100: #fef9c3;
+  --yellow-200: #fef08a;
+  --yellow-300: #fde047;
+  --yellow-400: #facc15;
+  --yellow-500: #007F06;
+  --yellow-600: #007005;
+  --yellow-700: #005904;
+  --yellow-800: #004203;
+  --yellow-900: #002e02;
+  --yellow-950: #001f01;
+}
+
+@theme inline {
+  /* Existing */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Fonts */
+  --font-inter: var(--font-inter);
+  --font-hanken: var(--font-hanken);
+
+  /* ------------------------------------------------------------------ */
+  /* Tailwind Color Tokens                                               */
+  /* ------------------------------------------------------------------ */
+
+  /* Primary */
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+
+  /* Secondary */
+  --color-secondary-50: var(--secondary-50);
+  --color-secondary-100: var(--secondary-100);
+  --color-secondary-200: var(--secondary-200);
+  --color-secondary-300: var(--secondary-300);
+  --color-secondary-400: var(--secondary-400);
+  --color-secondary-500: var(--secondary-500);
+  --color-secondary-600: var(--secondary-600);
+  --color-secondary-700: var(--secondary-700);
+  --color-secondary-800: var(--secondary-800);
+  --color-secondary-900: var(--secondary-900);
+
+  /* Cream & Warm Neutrals */
+  --color-cream-50: var(--cream-50);
+  --color-cream-100: var(--cream-100);
+  --color-cream-200: var(--cream-200);
+  --color-cream-300: var(--cream-300);
+  --color-cream-border: var(--cream-border);
+  --color-cream-border-subtle: var(--cream-border-subtle);
+  --color-cream-border-hover: var(--cream-border-hover);
+  --color-cream-white: var(--cream-white);
+
+  /* Neutral */
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+
+  /* Success */
+  --color-success-50: var(--success-50);
+  --color-success-100: var(--success-100);
+  --color-success-200: var(--success-200);
+  --color-success-300: var(--success-300);
+  --color-success-400: var(--success-400);
+  --color-success-500: var(--success-500);
+  --color-success-600: var(--success-600);
+  --color-success-700: var(--success-700);
+  --color-success-800: var(--success-800);
+  --color-success-900: var(--success-900);
+
+  /* Error */
+  --color-error-50: var(--error-50);
+  --color-error-100: var(--error-100);
+  --color-error-200: var(--error-200);
+  --color-error-300: var(--error-300);
+  --color-error-400: var(--error-400);
+  --color-error-500: var(--error-500);
+  --color-error-600: var(--error-600);
+  --color-error-700: var(--error-700);
+  --color-error-800: var(--error-800);
+  --color-error-900: var(--error-900);
+
+  /* Brown Storefront Scale */
+  --color-brown-50: var(--brown-50);
+  --color-brown-100: var(--brown-100);
+  --color-brown-200: var(--brown-200);
+  --color-brown-300: var(--brown-300);
+  --color-brown-400: var(--brown-400);
+  --color-brown-500: var(--brown-500);
+  --color-brown-600: var(--brown-600);
+  --color-brown-700: var(--brown-700);
+  --color-brown-800: var(--brown-800);
+  --color-brown-900: var(--brown-900);
+  --color-brown-950: var(--brown-950);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter);
+}
+
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.2s ease-out;
+  }
+
+  .fade-in-0 {
+    opacity: 0;
+  }
+
+  .zoom-in-95 {
+    transform: scale(0.95);
+  }
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Global Input & Select Focus Resets (No Black Border/Outline) */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea,
+button {
+  outline: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none !important;
+  border-color: var(--color-primary-500) !important;
+  box-shadow: 0 0 0 2px rgba(0, 127, 6, 0.15) !important;
+}
+
+/* Custom Scrollbar for Popups & Dropdowns */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-300);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-neutral-400);
+}
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* Storefront Button & Utility Styles */
+.btn-yellow {
+  background-color: var(--yellow-500);
+}
+.btn-yellow:hover {
+  background-color: var(--yellow-300);
+}
+.btn-brown {
+  background-color: var(--brown-600);
+}
+.btn-brown:hover {
+  background-color: var(--brown-700);
+}
+.drawer-active {
+  background-color: var(--brown-700);
+}
+.header-font {
+  font-family: var(--font-inter), sans-serif;
+}
+.feedback-font {
+  font-family: var(--font-hanken), var(--font-inter), sans-serif;
+}
+.text-hover-primary:hover {
+  color: var(--brown-700);
+}

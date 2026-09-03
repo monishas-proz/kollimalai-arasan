@@ -1,0 +1,487 @@
+import { db } from "@/lib/db/prisma";
+import { ApiError } from "@/lib/api/api-error";
+import { userRepository } from "@/features/users/repositories/user.repository";
+import { orderRepository } from "../repositories/order.repository";
+import type {
+  OrderDetailResponse,
+  OrderListItemResponse,
+  OrderListResponse,
+  OrderStatusTransitionResponse,
+  AdminOrdersCountResponse,
+} from "../types";
+import type {
+  CustomerCreateOrderInput,
+  CustomerOrdersQueryInput,
+  CustomerOrdersListInput,
+  AdminOrdersListInput,
+  CancelOrderInput,
+  ReturnOrderInput,
+  OrderStatusTransitionInput,
+} from "../validations/order.schema";
+import type { orders_order_status } from "@/generated/prisma";
+
+export const orderService = {
+  async createCustomerOrder(
+    sessionUserId: string,
+    input: CustomerCreateOrderInput
+  ): Promise<OrderDetailResponse> {
+    const user = await userRepository.findById(sessionUserId);
+    if (!user || !user.internalId) {
+      throw ApiError.unauthorized("User not found");
+    }
+    if (!user.isActive || user.is_active === false) {
+      throw ApiError.forbidden("Your account is inactive or blocked. Please contact support.");
+    }
+
+    const userId = user.internalId;
+
+    // 1. Find active cart with active cart items
+    const cart = await db.cart.findFirst({
+      where: {
+        userId,
+        status: "active",
+        is_active: true,
+      },
+      include: {
+        items: {
+          where: {
+            is_active: true,
+          },
+          include: {
+            product: true,
+            variant: {
+              include: {
+                product_units: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw ApiError.badRequest("Cart is empty or no active cart found");
+    }
+
+    // 2. Validate every cart item's product and variant
+    const orderItemsData: Array<{
+      productId: bigint;
+      variantId: bigint;
+      productName: string;
+      variantName: string;
+      sku: string;
+      quantity: number;
+      unitPrice: number;
+      taxAmount: number;
+      totalPrice: number;
+    }> = [];
+
+    let subtotal = 0;
+
+    for (const item of cart.items) {
+      if (
+        !item.product ||
+        !item.product.isActive ||
+        item.product.deleted_at !== null ||
+        !item.variant ||
+        !item.variant.isActive ||
+        item.variant.deleted_at !== null
+      ) {
+        throw ApiError.badRequest(
+          `Product variant "${item.variant?.variant_name || item.product?.name || "item"}" is no longer available`
+        );
+      }
+
+      const unitPrice =
+        item.variant.sale_price !== null && Number(item.variant.sale_price) > 0
+          ? Number(item.variant.sale_price)
+          : Number(item.variant.base_price);
+
+      const totalPrice = unitPrice * item.quantity;
+      subtotal += totalPrice;
+
+      orderItemsData.push({
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.product.name,
+        variantName: item.variant.variant_name,
+        sku: item.variant.sku,
+        quantity: item.quantity,
+        unitPrice,
+        taxAmount: 0,
+        totalPrice,
+      });
+    }
+
+    // 3. Validate shipping address
+    const shippingAddress = await db.customerAddress.findFirst({
+      where: {
+        uuid: input.shippingAddressId,
+        userId,
+        is_active: true,
+        deleted_at: null,
+      },
+    });
+
+    if (!shippingAddress) {
+      throw ApiError.badRequest(
+        "Shipping address not found or does not belong to customer"
+      );
+    }
+
+    if (shippingAddress.addressType !== "shipping") {
+      throw ApiError.badRequest(
+        "Selected shipping address must have addressType 'shipping'"
+      );
+    }
+
+    // 4. Validate billing address if provided
+    let billingAddress = shippingAddress;
+    if (input.billingAddressId) {
+      const foundBilling = await db.customerAddress.findFirst({
+        where: {
+          uuid: input.billingAddressId,
+          userId,
+          is_active: true,
+          deleted_at: null,
+        },
+      });
+
+      if (!foundBilling) {
+        throw ApiError.badRequest(
+          "Billing address not found or does not belong to customer"
+        );
+      }
+
+      if (foundBilling.addressType !== "billing") {
+        throw ApiError.badRequest(
+          "Selected billing address must have addressType 'billing'"
+        );
+      }
+
+      billingAddress = foundBilling;
+    }
+
+    const totalAmount = subtotal;
+
+    // 5. Execute creation transaction
+    return orderRepository.createCustomerOrderTransaction({
+      userId,
+      cartId: cart.id,
+      subtotal,
+      totalAmount,
+      notes: input.notes,
+      shippingAddress: {
+        fullName: shippingAddress.full_name,
+        phone: shippingAddress.phone,
+        addressLine1: shippingAddress.address_line1,
+        addressLine2: shippingAddress.address_line2,
+        landmark: shippingAddress.landmark,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        pincode: shippingAddress.pincode ?? "",
+        country: shippingAddress.country ?? "India",
+        latitude: shippingAddress.latitude ? Number(shippingAddress.latitude) : null,
+        longitude: shippingAddress.longitude ? Number(shippingAddress.longitude) : null,
+      },
+      billingAddress: {
+        fullName: billingAddress.full_name,
+        phone: billingAddress.phone,
+        addressLine1: billingAddress.address_line1,
+        addressLine2: billingAddress.address_line2,
+        landmark: billingAddress.landmark,
+        city: billingAddress.city,
+        state: billingAddress.state,
+        pincode: billingAddress.pincode ?? "",
+        country: billingAddress.country ?? "India",
+        latitude: billingAddress.latitude ? Number(billingAddress.latitude) : null,
+        longitude: billingAddress.longitude ? Number(billingAddress.longitude) : null,
+      },
+      items: orderItemsData,
+    });
+  },
+
+  async getCustomerOrders(
+    sessionUserId: string,
+    query: CustomerOrdersListInput | CustomerOrdersQueryInput = {}
+  ): Promise<OrderListResponse<OrderDetailResponse>> {
+    const user = await userRepository.findById(sessionUserId);
+    if (!user || !user.internalId) {
+      throw ApiError.unauthorized("User not found");
+    }
+    if (!user.isActive || user.is_active === false) {
+      throw ApiError.forbidden("Your account is inactive or blocked. Please contact support.");
+    }
+
+    return orderRepository.findCustomerOrders(user.internalId, query);
+  },
+
+  async getCustomerOrderByUuid(
+    sessionUserId: string,
+    uuid: string
+  ): Promise<OrderDetailResponse> {
+    const user = await userRepository.findById(sessionUserId);
+    if (!user || !user.internalId) {
+      throw ApiError.unauthorized("User not found");
+    }
+    if (!user.isActive || user.is_active === false) {
+      throw ApiError.forbidden("Your account is inactive or blocked. Please contact support.");
+    }
+
+    const order = await orderRepository.findCustomerOrderByUuid(
+      user.internalId,
+      uuid
+    );
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    return order;
+  },
+
+  async getAdminOrders(
+    query: AdminOrdersListInput
+  ): Promise<OrderListResponse<OrderListItemResponse>> {
+    return orderRepository.findAdminOrders(query);
+  },
+
+  async countAdminOrders(
+    query: AdminOrdersListInput
+  ): Promise<AdminOrdersCountResponse> {
+    return orderRepository.countAdminOrders(query);
+  },
+
+  async getAdminOrderByUuid(uuid: string): Promise<OrderDetailResponse> {
+    const order = await orderRepository.findAdminOrderByUuid(uuid);
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+    return order;
+  },
+
+  async cancelCustomerOrder(
+    sessionUserId: string,
+    uuid: string,
+    input?: CancelOrderInput
+  ): Promise<OrderDetailResponse> {
+    const user = await userRepository.findById(sessionUserId);
+    if (!user || !user.internalId) {
+      throw ApiError.unauthorized("User not found");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        userId: user.internalId,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    // Cancellation window: pending, confirmed, processing
+    const cancellableStatuses = ["pending", "confirmed", "processing"];
+    if (!cancellableStatuses.includes(order.order_status)) {
+      throw ApiError.badRequest(
+        `Order cannot be cancelled in '${order.order_status}' status`
+      );
+    }
+
+    return orderRepository.cancelOrderTransaction({
+      orderId: order.id,
+      note: input?.note || "Cancelled by customer",
+      changedBy: user.internalId,
+    });
+  },
+
+  async cancelAdminOrder(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: CancelOrderInput
+  ): Promise<OrderDetailResponse> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    if (!adminUser || !adminUser.internalId) {
+      throw ApiError.unauthorized("Admin user not found");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (
+      order.order_status === "delivered" ||
+      order.order_status === "returned" ||
+      order.order_status === "cancelled"
+    ) {
+      throw ApiError.badRequest(
+        `Cannot cancel an order that is already '${order.order_status}'`
+      );
+    }
+
+    return orderRepository.cancelOrderTransaction({
+      orderId: order.id,
+      note: input?.note || "Cancelled by admin",
+      changedBy: adminUser.internalId,
+    });
+  },
+
+  async returnCustomerOrder(
+    sessionUserId: string,
+    uuid: string,
+    input?: ReturnOrderInput
+  ): Promise<OrderDetailResponse> {
+    const user = await userRepository.findById(sessionUserId);
+    if (!user || !user.internalId) {
+      throw ApiError.unauthorized("User not found");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        userId: user.internalId,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (order.order_status !== "delivered") {
+      throw ApiError.badRequest("Only delivered orders can be returned");
+    }
+
+    return orderRepository.returnOrderTransaction({
+      orderId: order.id,
+      note: input?.note || "Return requested by customer",
+      changedBy: user.internalId,
+    });
+  },
+
+  async returnAdminOrder(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: ReturnOrderInput
+  ): Promise<OrderDetailResponse> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    if (!adminUser || !adminUser.internalId) {
+      throw ApiError.unauthorized("Admin user not found");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (order.order_status !== "delivered") {
+      throw ApiError.badRequest("Only delivered orders can be returned");
+    }
+
+    return orderRepository.returnOrderTransaction({
+      orderId: order.id,
+      note: input?.note || "Return processed by admin",
+      changedBy: adminUser.internalId,
+    });
+  },
+
+  async transitionOrderStatus(
+    adminSessionUserId: string,
+    uuid: string,
+    expectedCurrentStatus: orders_order_status,
+    newStatus: orders_order_status,
+    input?: OrderStatusTransitionInput
+  ): Promise<OrderStatusTransitionResponse> {
+    const adminUser = await userRepository.findById(adminSessionUserId);
+    if (!adminUser || !adminUser.internalId) {
+      throw ApiError.unauthorized("Admin user not found");
+    }
+
+    const order = await db.order.findFirst({
+      where: {
+        uuid,
+        is_active: true,
+      },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Order not found");
+    }
+
+    if (order.order_status !== expectedCurrentStatus) {
+      throw ApiError.badRequest(
+        `Order status is '${order.order_status}'. Only '${expectedCurrentStatus}' orders can be transitioned to '${newStatus}'.`
+      );
+    }
+
+    const updated = await orderRepository.updateOrderStatusWithHistory({
+      orderId: order.id,
+      status: newStatus,
+      note: input?.note,
+      changedBy: adminUser.internalId,
+    });
+
+    return {
+      id: updated.id,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+    };
+  },
+
+  async confirmOrder(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: OrderStatusTransitionInput
+  ): Promise<OrderStatusTransitionResponse> {
+    return this.transitionOrderStatus(
+      adminSessionUserId,
+      uuid,
+      "pending",
+      "confirmed",
+      input
+    );
+  },
+
+  async startProcessingOrder(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: OrderStatusTransitionInput
+  ): Promise<OrderStatusTransitionResponse> {
+    return this.transitionOrderStatus(
+      adminSessionUserId,
+      uuid,
+      "confirmed",
+      "processing",
+      input
+    );
+  },
+
+  async markOrderAsPacked(
+    adminSessionUserId: string,
+    uuid: string,
+    input?: OrderStatusTransitionInput
+  ): Promise<OrderStatusTransitionResponse> {
+    return this.transitionOrderStatus(
+      adminSessionUserId,
+      uuid,
+      "processing",
+      "packed",
+      input
+    );
+  },
+};
